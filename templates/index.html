@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Финансовый анализ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .container { max-width: 1200px; margin: 0 auto; }
+        .chart { margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background: #f5f5f5; }
+        .error { color: red; margin: 20px; }
+        .filter { margin: 20px 0; }
+        .total-row { font-weight: bold; background: #f0f0f0; }
+        .total-row td:first-child { padding-left: 20px; }
+        .chart-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .pie-chart {
+            width: 45%;
+            height: 300px;
+        }
+        .bar-chart {
+            height: 400px;
+            margin-top: 20px;
+        }
+        .table-charts-container {
+            display: flex;
+            margin: 20px 0;
+        }
+
+        .table-wrapper {
+            width: 60%;
+        }
+
+        .pie-charts {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .pie-chart-wrapper {
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анализ финансовой отчетности</h1>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" id="fileInput" accept=".xlsx" required>
+        </form>
+
+        <div id="content" style="display: none;">
+            <div class="filter">
+                <select id="sectionFilter">
+                    <option value="all">Все разделы</option>
+                </select>
+            </div>
+            <div class="table-charts-container">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Пункт</th>
+                                <th id="year1Header"></th>
+                                <th id="year2Header"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="pie-charts">
+                    <div class="pie-chart-wrapper">
+                        <canvas id="pieYear1"></canvas>
+                    </div>
+                    <div class="pie-chart-wrapper">
+                        <canvas id="pieYear2"></canvas>
+                    </div>
+                </div>
+            </div>
+        
+            <canvas id="barChart" class="bar-chart"></canvas>
+        </div>
+
+        <div id="errorContainer" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        let data = {
+            years: [],
+            sections: [],
+            filteredData: []
+        };
+        const charts = {
+            pieYear1: null,
+            pieYear2: null,
+            barChart: null
+        };
+
+        document.getElementById('uploadForm').addEventListener('change', async (e) => {
+            e.preventDefault();
+            
+            const file = document.getElementById('fileInput').files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    data = {
+                        years: result.years,
+                        sections: result.sections,
+                        filteredData: result.sections
+                    };
+                    
+                    // Инициализация интерфейса
+                    document.getElementById('year1Header').textContent = result.years[0];
+                    document.getElementById('year2Header').textContent = result.years[1];
+                    
+                    const filter = document.getElementById('sectionFilter');
+                    result.section_names.forEach(section => {
+                        const option = document.createElement('option');
+                        option.value = section;
+                        option.textContent = section;
+                        filter.appendChild(option);
+                    });
+                    
+                    filter.addEventListener('change', updateContent);
+                    updateContent();
+                    
+                    document.getElementById('content').style.display = 'block';
+                    document.getElementById('errorContainer').style.display = 'none';
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                document.getElementById('errorContainer').textContent = `Ошибка: ${error.message}`;
+                document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('content').style.display = 'none';
+            }
+        });
+
+        function updateContent() {
+            const filter = document.getElementById('sectionFilter').value;
+            data.filteredData = filter === 'all' 
+                ? data.sections 
+                : data.sections.filter(item => item.section === filter);
+            
+            updateTable();
+            updateCharts();
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = data.filteredData.map(item => `
+                <tr class="${item.is_total ? 'total-row' : ''}">
+                    <td>${item.item}</td>
+                    <td>${formatNumber(item[data.years[0]])}</td>
+                    <td>${formatNumber(item[data.years[1]])}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateCharts() {
+            const filter = document.getElementById('sectionFilter').value;
+            const isAllSections = filter === 'all';
+            const year1 = data.years[0];
+            const year2 = data.years[1];
+            let aggregated = {};
+
+            // Новая логика агрегации данных
+            if (isAllSections) {
+                data.filteredData.forEach(item => {
+                    if (!aggregated[item.section]) {
+                        aggregated[item.section] = { [year1]: 0, [year2]: 0 };
+                    }
+                    aggregated[item.section][year1] += item[year1] || 0;
+                    aggregated[item.section][year2] += item[year2] || 0;
+                });
+            } else {
+                data.filteredData.forEach(item => {
+                    if (!item.is_total) {
+                        if (!aggregated[item.item]) {
+                            aggregated[item.item] = { [year1]: 0, [year2]: 0 };
+                        }
+                        aggregated[item.item][year1] += item[year1] || 0;
+                        aggregated[item.item][year2] += item[year2] || 0;
+                    }
+                });
+            }
+
+            const labels = Object.keys(aggregated);
+            const data1 = Object.values(aggregated).map(v => v[year1]);
+            const data2 = Object.values(aggregated).map(v => v[year2]);
+
+            // Обновление пайчартов
+            createPieChart('pieYear1', labels, data1, year1);
+            createPieChart('pieYear2', labels, data2, year2);
+
+            // Обновление столбчатой диаграммы
+            createBarChart('barChart', labels, data1, data2);
+        }
+
+        function createPieChart(canvasId, labels, data, title) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[canvasId]) charts[canvasId].destroy();
+            charts[canvasId] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: title,
+                        data: data,
+                        backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: title }
+                    }
+                }
+            });
+        }
+
+        function createBarChart(canvasId, labels, data1, data2) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[canvasId]) charts[canvasId].destroy();
+            charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: data.years[0],
+                            data: data1,
+                            backgroundColor: '#FF6B6B',
+                            barPercentage: 0.4,
+                            categoryPercentage: 0.6
+                        },
+                        {
+                            label: data.years[1],
+                            data: data2,
+                            backgroundColor: '#4ECDC4',
+                            barPercentage: 0.4,
+                            categoryPercentage: 0.6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: { display: true, text: 'Сравнение по годам' }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: { display: false }
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+    }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('ru-RU').format(num || 0);
+        }
+    </script>
+</body>
+</html>
