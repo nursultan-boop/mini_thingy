@@ -45,11 +45,17 @@
         .pie-chart-wrapper {
             height: 300px;
         }
+        .section-header th {
+            background: #e0e0e0;
+            font-weight: bold;
+            text-align: left;
+            padding: 12px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Анализ финансовой отчетности</h1>
+        <h1>Анализ отчета о финансовом положении</h1>
         
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" id="fileInput" accept=".xlsx" required>
@@ -66,7 +72,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Пункт</th>
+                                <th>Раздел</th>
                                 <th id="year1Header"></th>
                                 <th id="year2Header"></th>
                             </tr>
@@ -90,7 +96,7 @@
 
         <div id="errorContainer" class="error" style="display: none;"></div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script>
         let data = {
             years: [],
@@ -102,6 +108,7 @@
             pieYear2: null,
             barChart: null
         };
+        
 
         document.getElementById('uploadForm').addEventListener('change', async (e) => {
             e.preventDefault();
@@ -126,8 +133,8 @@
                     };
                     
                     // Инициализация интерфейса
-                    document.getElementById('year1Header').textContent = result.years[0];
-                    document.getElementById('year2Header').textContent = result.years[1];
+                    document.getElementById('year1Header').textContent = result.years[0]+" (тыс. тенге)";
+                    document.getElementById('year2Header').textContent = result.years[1]+" (тыс. тенге)";
                     
                     const filter = document.getElementById('sectionFilter');
                     result.section_names.forEach(section => {
@@ -164,13 +171,46 @@
 
         function updateTable() {
             const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = data.filteredData.map(item => `
-                <tr class="${item.is_total ? 'total-row' : ''}">
-                    <td>${item.item}</td>
-                    <td>${formatNumber(item[data.years[0]])}</td>
-                    <td>${formatNumber(item[data.years[1]])}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = '';
+            
+            const filter = document.getElementById('sectionFilter').value;
+            const isAllSections = filter === 'all';
+            const headerCell = document.querySelector('th:first-child');
+            if (isAllSections) {
+                headerCell.textContent = data.sections.length > 0 ? data.sections[0].section : 'Пункт';
+            } else {
+                headerCell.textContent = filter;
+            }
+            
+
+            const groupedData = data.filteredData.reduce((acc, item) => {
+                if (!acc[item.section]) acc[item.section] = [];
+                acc[item.section].push(item);
+                return acc;
+            }, {});
+
+            Object.keys(groupedData).forEach(section => {
+                if (filter === 'all' && section !== data.sections[0].section) {
+                    const headerRow = document.createElement('tr');
+                    headerRow.className = 'section-header';
+                    const headerCell = document.createElement('th');
+                    headerCell.textContent = section;
+                    headerCell.colSpan = 3;
+                    headerRow.appendChild(headerCell);
+                    tbody.appendChild(headerRow);
+                }
+
+                groupedData[section].forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = item.is_total ? 'total-row' : '';
+                    row.innerHTML = `
+                        <td>${item.item}</td>
+                        <td>${formatNumber(item[data.years[0]])}</td>
+                        <td>${formatNumber(item[data.years[1]])}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            });
         }
 
         function updateCharts() {
@@ -217,24 +257,34 @@
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (charts[canvasId]) charts[canvasId].destroy();
             charts[canvasId] = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: title,
-                        data: data,
-                        backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: title }
-                    }
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                label: title,
+                data: data,
+                backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                title: { display: true, text: title },
+                datalabels: {
+                    formatter: (value, context) => {
+                    const total = data.reduce((acc, val) => acc + val, 0);
+                    return total ? `${((value / total) * 100).toFixed(1)}%` : '0%';
+                    },
+                    color: '#fff',
+                    font: { weight: 'bold' }
                 }
+                }
+            },
+            plugins: [ChartDataLabels]
             });
         }
+        
 
         function createBarChart(canvasId, labels, data1, data2) {
             const ctx = document.getElementById(canvasId).getContext('2d');
@@ -282,6 +332,7 @@
         function formatNumber(num) {
             return new Intl.NumberFormat('ru-RU').format(num || 0);
         }
+
     </script>
 </body>
 </html>
