@@ -51,6 +51,21 @@
             text-align: left;
             padding: 12px;
         }
+        .liquidity-table {
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        .liquidity-table th {
+            background: #e8f4ff;
+        }
+        .fin-table {
+            margin: 20px 0;
+            width: 100%;
+        }
+        .fin-table th {
+            background: #fff3e0;
+        }
     </style>
 </head>
 <body>
@@ -62,9 +77,12 @@
         </form>
 
         <div id="content" style="display: none;">
+            
             <div class="filter">
                 <select id="sectionFilter">
                     <option value="all">Все разделы</option>
+                    <option value="liquidity">Ликвидность</option>
+                    <option value="fin">Финансовая устойчивость</option>
                 </select>
             </div>
             <div class="table-charts-container">
@@ -97,6 +115,7 @@
         <div id="errorContainer" class="error" style="display: none;"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom.min.js"></script>
     <script>
         let data = {
             years: [],
@@ -129,7 +148,9 @@
                     data = {
                         years: result.years,
                         sections: result.sections,
-                        filteredData: result.sections
+                        liquidity: result.liquidity,
+                        filteredData: result.sections,
+                        fin: result.fin,
                     };
                     
                     // Инициализация интерфейса
@@ -161,12 +182,57 @@
 
         function updateContent() {
             const filter = document.getElementById('sectionFilter').value;
-            data.filteredData = filter === 'all' 
-                ? data.sections 
-                : data.sections.filter(item => item.section === filter);
+            if (filter === 'liquidity') {
+                showLiquidityTable();
+            } else if (filter === 'fin') {
+                showFinTable();
+            } else {
+                data.filteredData = filter === 'all' 
+                    ? data.sections 
+                    : data.sections.filter(item => item.section === filter);
+                updateTable();
+                updateCharts();
+            }
+        }
+
+        function showLiquidityTable() {
+            const headerCell = document.querySelector('th:first-child');
+            headerCell.textContent = 'Ликвидность';
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
             
-            updateTable();
-            updateCharts();
+            // Заполняем данными
+            data.liquidity.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.indicator}</td>
+                    <td>${formatNumber(item[data.years[0]])}</td>
+                    <td>${formatNumber(item[data.years[1]])}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            updateCharts(); 
+        }
+
+        function showFinTable() {
+            const headerCell = document.querySelector('th:first-child');
+            headerCell.textContent = 'Финансовая устойчивость';
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            // Заполняем данными
+            data.fin.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.indicator}</td>
+                    <td>${formatNumber(item[data.years[0]])}</td>
+                    <td>${formatNumber(item[data.years[1]])}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            updateCharts(); 
         }
 
         function updateTable() {
@@ -212,47 +278,65 @@
                 });
             });
         }
-
         function updateCharts() {
             const filter = document.getElementById('sectionFilter').value;
-            const isAllSections = filter === 'all';
             const year1 = data.years[0];
             const year2 = data.years[1];
-            let aggregated = {};
+            
+            // Очистка существующих графиков
+            if (charts.pieYear1) charts.pieYear1.destroy();
+            if (charts.pieYear2) charts.pieYear2.destroy();
+            if (charts.barChart) charts.barChart.destroy();
 
-            // Новая логика агрегации данных
-            if (isAllSections) {
-                data.filteredData.forEach(item => {
-                    if (!aggregated[item.section]) {
-                        aggregated[item.section] = { [year1]: 0, [year2]: 0 };
-                    }
-                    aggregated[item.section][year1] += item[year1] || 0;
-                    aggregated[item.section][year2] += item[year2] || 0;
-                });
+            if (filter === 'liquidity' || filter === 'fin') {
+                // Скрываем пай-чарты
+                // document.querySelectorAll('.pie-chart-wrapper').forEach(el => el.style.display = 'none');
+                
+                // Подготовка данных для столбчатой диаграммы
+                const source = filter === 'liquidity' ? data.liquidity : data.fin;
+                const labels = source.map(item => item.indicator);
+                const data1 = source.map(item => item[year1]);
+                const data2 = source.map(item => item[year2]);
+                createPieChart('pieYear1', labels, data1, year1);
+                console.log(data1, labels, year1);
+                createPieChart('pieYear2', labels, data2, year2);
+                createBarChart('barChart', labels, data1, data2);
             } else {
-                data.filteredData.forEach(item => {
-                    if (!item.is_total) {
-                        if (!aggregated[item.item]) {
-                            aggregated[item.item] = { [year1]: 0, [year2]: 0 };
+                // Восстановление пай-чартов
+                document.querySelectorAll('.pie-chart-wrapper').forEach(el => el.style.display = 'block');
+                
+                // Стандартная логика для других разделов
+                let aggregated = {};
+                if (filter === 'all') {
+                    data.filteredData.forEach(item => {
+                        if (!aggregated[item.section]) {
+                            aggregated[item.section] = { [year1]: 0, [year2]: 0 };
                         }
-                        aggregated[item.item][year1] += item[year1] || 0;
-                        aggregated[item.item][year2] += item[year2] || 0;
-                    }
-                });
+                        aggregated[item.section][year1] += item[year1] || 0;
+                        aggregated[item.section][year2] += item[year2] || 0;
+                    });
+                } else {
+                    data.filteredData.forEach(item => {
+                        if (!item.is_total) {
+                            if (!aggregated[item.item]) {
+                                aggregated[item.item] = { [year1]: 0, [year2]: 0 };
+                            }
+                            aggregated[item.item][year1] += item[year1] || 0;
+                            aggregated[item.item][year2] += item[year2] || 0;
+                        }
+                    });
+                }
+                
+                const labels = Object.keys(aggregated);
+                const data1 = Object.values(aggregated).map(v => v[year1]);
+                const data2 = Object.values(aggregated).map(v => v[year2]);
+                
+                createPieChart('pieYear1', labels, data1, year1);
+                console.log(data1, labels, year1);
+                createPieChart('pieYear2', labels, data2, year2);
+                createBarChart('barChart', labels, data1, data2);
             }
-
-            const labels = Object.keys(aggregated);
-            const data1 = Object.values(aggregated).map(v => v[year1]);
-            const data2 = Object.values(aggregated).map(v => v[year2]);
-
-            // Обновление пайчартов
-            createPieChart('pieYear1', labels, data1, year1);
-            createPieChart('pieYear2', labels, data2, year2);
-
-            // Обновление столбчатой диаграммы
-            createBarChart('barChart', labels, data1, data2);
         }
-
         function createPieChart(canvasId, labels, data, title) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (charts[canvasId]) charts[canvasId].destroy();
@@ -263,7 +347,7 @@
                 datasets: [{
                 label: title,
                 data: data,
-                backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD']
+                backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD'],
                 }]
             },
             options: {
@@ -276,7 +360,7 @@
                     const total = data.reduce((acc, val) => acc + val, 0);
                     return total ? `${((value / total) * 100).toFixed(1)}%` : '0%';
                     },
-                    color: '#fff',
+                    color: '#000',
                     font: { weight: 'bold' }
                 }
                 }
@@ -289,6 +373,7 @@
         function createBarChart(canvasId, labels, data1, data2) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (charts[canvasId]) charts[canvasId].destroy();
+            
             charts[canvasId] = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -313,22 +398,46 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        title: { display: true, text: 'Сравнение по годам' }
+                        title: { 
+                            display: true, 
+                            text: 'Сравнение коэффициентов по годам' 
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
                     },
                     scales: {
                         x: {
                             stacked: false,
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                callback: function(label) {
+                                    return formatLabel(label, 20); // 20 - максимальная длина строки
+                                }
+                            }
                         },
                         y: {
                             stacked: false,
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('ru-RU');
+                                }
+                            }
                         }
                     }
                 }
             });
-    }
-
+        }
+        function formatLabel(str, maxChars) {
+            if (str.length > maxChars) {
+                return str.slice(0, maxChars) + '...';
+            }
+            return str;
+        }
         function formatNumber(num) {
             return new Intl.NumberFormat('ru-RU').format(num || 0);
         }

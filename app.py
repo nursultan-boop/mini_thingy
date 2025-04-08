@@ -53,6 +53,63 @@ def parse_table(file_path):
             40: 'Текущие обязательства'        # Строка 47 Excel
         }
 
+        current_assets = df.iloc[16]
+        current_liabilities = df.iloc[40]
+        inventory = df.iloc[8]
+        cash = df.iloc[14]
+        other_current_assets = df.iloc[15]
+        # Расчет коэффициентов ликвидности
+        liquidity = [
+            {
+                'indicator': 'Коэффициент текущей ликвидности',
+                year1: round(current_assets[year1] / current_liabilities[year1], 2),
+                year2: round(current_assets[year2] / current_liabilities[year2], 2)
+            },
+            {
+                'indicator': 'Коэффициент быстрой ликвидности',
+                year1: round((current_assets[year1] - inventory[year1]) / current_liabilities[year1], 2),
+                year2: round((current_assets[year2] - inventory[year2]) / current_liabilities[year2], 2)
+            },
+            {
+                'indicator': 'Коэффициент абсолютной ликвидности',
+                year1: round((cash[year1] + other_current_assets[year1]) / current_liabilities[year1], 2),
+                year2: round((cash[year2] + other_current_assets[year2]) / current_liabilities[year2], 2)
+            }
+        ]
+        fin = [
+            {
+                'indicator': 'Коэффициент независимости',
+                year1: round(df.iloc[27][year1]/df.iloc[42][year1], 2),
+                year2: round(df.iloc[27][year2]/df.iloc[42][year2], 2)
+            },
+            {
+                'indicator': 'Коэффициент финансовой устойчивости',
+                year1: round((df.iloc[33][year1] + df.iloc[27][year1]) / df.iloc[42][year1], 2),
+                year2: round((df.iloc[33][year2] + df.iloc[27][year2]) / df.iloc[42][year2], 2)
+            },
+            {
+                'indicator': 'Коэффициент финансовой зависимости',
+                year1: round(df.iloc[42][year1] / df.iloc[27][year1], 2),
+                year2: round(df.iloc[42][year2] / df.iloc[27][year2], 2)
+            },
+            {
+                'indicator': 'Коэффициент соотношения заемных и собственных средств',
+                year1: round((df.iloc[33][year1] + df.iloc[40][year1]) / df.iloc[27][year1], 2),
+                year2: round((df.iloc[33][year2] + df.iloc[40][year2]) / df.iloc[27][year2], 2)
+            },
+            {
+                'indicator': 'Коэффициент долгосрочного привлечения заемных средств',
+                year1: round(df.iloc[29][year1]/(df.iloc[29][year1] + df.iloc[27][year1]) , 2),
+                year2: round(df.iloc[29][year2]/(df.iloc[29][year2] + df.iloc[27][year2]) , 2)
+            },
+            {
+                'indicator': 'Коэффициент маневренности',
+                year1: round((df.iloc[27][year1] + df.iloc[33][year1] - df.iloc[6][year1]) / df.iloc[27][year1], 2),
+                year2: round((df.iloc[27][year2] + df.iloc[33][year2] - df.iloc[6][year2]) / df.iloc[27][year2], 2)
+            }
+            
+        ]
+        print('fin', fin[0][year1])
         for idx, row in df.iterrows():
             category = row['category']
             
@@ -94,7 +151,9 @@ def parse_table(file_path):
         return {
             'years': [year1, year2],
             'sections': sections,
-            'section_names': list({s['section'] for s in sections})
+            'section_names': list({s['section'] for s in sections}),
+            'liquidity': liquidity,
+            'fin': fin
         }
     
     except Exception as e:
@@ -132,7 +191,9 @@ def index():
             'success': True,
             'years': data['years'],
             'sections': data['sections'],
-            'section_names': data['section_names']
+            'section_names': data['section_names'],
+            'liquidity': data.get('liquidity', []),
+            'fin': data.get('fin', [])
         }))
     
     return render_template('index.html')
