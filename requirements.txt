@@ -2,7 +2,6 @@ attr==0.3.2
 ConfigParser==7.2.0
 contextlib2==21.6.0
 cryptography==44.0.2
-Cython==3.0.11
 defusedxml==0.7.1
 dl==0.1.0
 docutils==0.21.2
