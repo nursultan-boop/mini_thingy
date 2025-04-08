@@ -208,11 +208,13 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
+            const labels = data.liquidity.map(item => item.indicator_name || item.indicator);
+
             // Заполняем данными
             data.liquidity.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.indicator}</td>
+                    <td>${item.indicator_name || item.indicator}</td> <!-- Используем indicator_name -->
                     <td>${formatNumber(item[data.years[0]])}</td>
                     <td>${formatNumber(item[data.years[1]])}</td>
                 `;
@@ -230,15 +232,17 @@
 
             const year2HeaderCell = document.querySelector('th:nth-child(3)');
             year2HeaderCell.textContent = data.years[1];
-            
+
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
+            const labels = data.fin.map(item => item.indicator_name || item.indicator);
+                        
             // Заполняем данными
             data.fin.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.indicator}</td>
+                    <td>${item.indicator_name || item.indicator}</td> <!-- Используем indicator_name -->
                     <td>${formatNumber(item[data.years[0]])}</td>
                     <td>${formatNumber(item[data.years[1]])}</td>
                 `;
@@ -301,17 +305,22 @@
             if (charts.barChart) charts.barChart.destroy();
 
             if (filter === 'liquidity' || filter === 'fin') {
-                // Скрываем пай-чарты
-                document.querySelectorAll('.pie-chart-wrapper').forEach(el => el.style.display = 'none');
+                const source = filter === 'liquidity' 
+                    ? data.liquidity.map(item => ({
+                        indicator: item.indicator_name || item.indicator,
+                        year1: item[data.years[0]],
+                        year2: item[data.years[1]]
+                    }))
+                    : data.fin.map(item => ({
+                        indicator: item.indicator_name || item.indicator,
+                        year1: item[data.years[0]],
+                        year2: item[data.years[1]]
+                    }));
                 
-                // Подготовка данных для столбчатой диаграммы
-                const source = filter === 'liquidity' ? data.liquidity : data.fin;
                 const labels = source.map(item => item.indicator);
-                const data1 = source.map(item => item[year1]);
-                const data2 = source.map(item => item[year2]);
-                createPieChart('pieYear1', labels, data1, year1);
-                console.log(data1, labels, year1);
-                createPieChart('pieYear2', labels, data2, year2);
+                const data1 = source.map(item => item.year1);
+                const data2 = source.map(item => item.year2);
+                console.log(labels)
                 createBarChart('barChart', labels, data1, data2);
             } else {
                 // Восстановление пай-чартов
@@ -387,68 +396,93 @@
             if (charts[canvasId]) charts[canvasId].destroy();
             
             charts[canvasId] = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: data.years[0],
-                            data: data1,
-                            backgroundColor: '#FF6B6B',
-                            barPercentage: 0.4,
-                            categoryPercentage: 0.6
-                        },
-                        {
-                            label: data.years[1],
-                            data: data2,
-                            backgroundColor: '#4ECDC4',
-                            barPercentage: 0.4,
-                            categoryPercentage: 0.6
-                        }
-                    ]
+            type: 'bar',
+            data: {
+                labels: labels.map(label => label.length > 20 ? label.slice(0, 20) + '...' : label),
+                datasets: [
+                {
+                    label: data.years[0],
+                    data: data1,
+                    backgroundColor: '#FF6B6B',
+                    barPercentage: 0.4,
+                    categoryPercentage: 0.6
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: { 
-                            display: true, 
-                            text: 'Сравнение коэффициентов по годам' 
-                        },
-                        legend: {
-                            position: 'bottom'
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: false,
-                            grid: { display: false },
-                            ticks: {
-                                autoSkip: false,
-                                maxRotation: 0,
-                                minRotation: 0,
-                                callback: function(label) {
-                                    return formatLabel(label, 20); // 20 - максимальная длина строки
-                                }
-                            }
-                        },
-                        y: {
-                            stacked: false,
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('ru-RU');
-                                }
-                            }
-                        }
+                {
+                    label: data.years[1],
+                    data: data2,
+                    backgroundColor: '#4ECDC4',
+                    barPercentage: 0.4,
+                    categoryPercentage: 0.6
+                }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                title: { 
+                    display: true, 
+                    text: 'Сравнение коэффициентов по годам' 
+                },
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                    title: function(tooltipItems) {
+                        return labels[tooltipItems[0].dataIndex];
+                    }
                     }
                 }
+                },
+                scales: {
+                x: {
+                    stacked: false,
+                    grid: { display: false },
+                    ticks: {
+                    autoSkip: false,
+                    maxRotation: 0,
+                    minRotation: 0
+                    }
+                },
+                y: {
+                    stacked: false,
+                    beginAtZero: true,
+                    ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('ru-RU');
+                    }
+                    }
+                }
+                }
+            }
             });
         }
-        function formatLabel(str, maxChars) {
-            if (str.length > maxChars) {
-                return str.slice(0, maxChars) + '...';
+        
+        function formatLabel(label, maxChars) {
+            const str = String(label); // Преобразуем в строку
+            console.log(str);
+            let result = '';
+            let currentLine = '';
+            const words = str.split(' ');
+            
+            words.forEach(word => {
+                if ((currentLine + word).length > maxChars) {
+                    if (currentLine) {
+                        result += currentLine.trim() + '\n';
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine = word + ' ';
+                    }
+                } else {
+                    currentLine += word + ' ';
+                }
+            });
+            
+            if (currentLine.trim()) {
+                result += currentLine.trim();
             }
-            return str;
+            console.log(result);
+            return result;
         }
         function formatNumber(num) {
             return new Intl.NumberFormat('ru-RU').format(num || 0);
