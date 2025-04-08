@@ -62,50 +62,50 @@ def parse_table(file_path):
         liquidity = [
             {
                 'indicator': 'Коэффициент текущей ликвидности',
-                year1: round(current_assets[year1] / current_liabilities[year1], 2),
-                year2: round(current_assets[year2] / current_liabilities[year2], 2)
+                year1: round(current_assets[year1] / current_liabilities[year1], 3),
+                year2: round(current_assets[year2] / current_liabilities[year2], 3)
             },
             {
                 'indicator': 'Коэффициент быстрой ликвидности',
-                year1: round((current_assets[year1] - inventory[year1]) / current_liabilities[year1], 2),
-                year2: round((current_assets[year2] - inventory[year2]) / current_liabilities[year2], 2)
+                year1: round((current_assets[year1] - inventory[year1]) / current_liabilities[year1], 3),
+                year2: round((current_assets[year2] - inventory[year2]) / current_liabilities[year2], 3)
             },
             {
                 'indicator': 'Коэффициент абсолютной ликвидности',
-                year1: round((cash[year1] + other_current_assets[year1]) / current_liabilities[year1], 2),
-                year2: round((cash[year2] + other_current_assets[year2]) / current_liabilities[year2], 2)
+                year1: round((cash[year1] + other_current_assets[year1]) / current_liabilities[year1], 3),
+                year2: round((cash[year2] + other_current_assets[year2]) / current_liabilities[year2], 3)
             }
         ]
         fin = [
             {
                 'indicator': 'Коэффициент независимости',
-                year1: round(df.iloc[27][year1]/df.iloc[42][year1], 2),
-                year2: round(df.iloc[27][year2]/df.iloc[42][year2], 2)
+                year1: round(df.iloc[27][year1]/df.iloc[42][year1], 3),
+                year2: round(df.iloc[27][year2]/df.iloc[42][year2], 3)
             },
             {
                 'indicator': 'Коэффициент финансовой устойчивости',
-                year1: round((df.iloc[33][year1] + df.iloc[27][year1]) / df.iloc[42][year1], 2),
-                year2: round((df.iloc[33][year2] + df.iloc[27][year2]) / df.iloc[42][year2], 2)
+                year1: round((df.iloc[33][year1] + df.iloc[27][year1]) / df.iloc[42][year1], 3),
+                year2: round((df.iloc[33][year2] + df.iloc[27][year2]) / df.iloc[42][year2], 3)
             },
             {
                 'indicator': 'Коэффициент финансовой зависимости',
-                year1: round(df.iloc[42][year1] / df.iloc[27][year1], 2),
-                year2: round(df.iloc[42][year2] / df.iloc[27][year2], 2)
+                year1: round(df.iloc[42][year1] / df.iloc[27][year1], 3),
+                year2: round(df.iloc[42][year2] / df.iloc[27][year2], 3)
             },
             {
                 'indicator': 'Коэффициент соотношения заемных и собственных средств',
-                year1: round((df.iloc[33][year1] + df.iloc[40][year1]) / df.iloc[27][year1], 2),
-                year2: round((df.iloc[33][year2] + df.iloc[40][year2]) / df.iloc[27][year2], 2)
+                year1: round((df.iloc[33][year1] + df.iloc[40][year1]) / df.iloc[27][year1], 3),
+                year2: round((df.iloc[33][year2] + df.iloc[40][year2]) / df.iloc[27][year2], 3)
             },
             {
                 'indicator': 'Коэффициент долгосрочного привлечения заемных средств',
-                year1: round(df.iloc[29][year1]/(df.iloc[29][year1] + df.iloc[27][year1]) , 2),
-                year2: round(df.iloc[29][year2]/(df.iloc[29][year2] + df.iloc[27][year2]) , 2)
+                year1: round(df.iloc[29][year1]/(df.iloc[29][year1] + df.iloc[27][year1]) , 3),
+                year2: round(df.iloc[29][year2]/(df.iloc[29][year2] + df.iloc[27][year2]) , 3)
             },
             {
                 'indicator': 'Коэффициент маневренности',
-                year1: round((df.iloc[27][year1] + df.iloc[33][year1] - df.iloc[6][year1]) / df.iloc[27][year1], 2),
-                year2: round((df.iloc[27][year2] + df.iloc[33][year2] - df.iloc[6][year2]) / df.iloc[27][year2], 2)
+                year1: round((df.iloc[27][year1] + df.iloc[33][year1] - df.iloc[6][year1]) / df.iloc[27][year1], 3),
+                year2: round((df.iloc[27][year2] + df.iloc[33][year2] - df.iloc[6][year2]) / df.iloc[27][year2], 3)
             }
             
         ]
