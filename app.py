@@ -119,8 +119,8 @@ def parse_table(file_path):
                 sections.append({
                     'section': section,
                     'item': 'Итого',
-                    year1: row[year1],
-                    year2: row[year2],
+                    year1: round(row[year1], 3),
+                    year2: round(row[year2], 3),
                     'is_total': True
                 })
                 continue

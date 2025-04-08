@@ -199,6 +199,12 @@
             const headerCell = document.querySelector('th:first-child');
             headerCell.textContent = 'Ликвидность';
 
+            const year1HeaderCell = document.querySelector('th:nth-child(2)');
+            year1HeaderCell.textContent = data.years[0];
+
+            const year2HeaderCell = document.querySelector('th:nth-child(3)');
+            year2HeaderCell.textContent = data.years[1];
+
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
@@ -218,7 +224,13 @@
         function showFinTable() {
             const headerCell = document.querySelector('th:first-child');
             headerCell.textContent = 'Финансовая устойчивость';
+            
+            const year1HeaderCell = document.querySelector('th:nth-child(2)');
+            year1HeaderCell.textContent = data.years[0];
 
+            const year2HeaderCell = document.querySelector('th:nth-child(3)');
+            year2HeaderCell.textContent = data.years[1];
+            
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
@@ -290,7 +302,7 @@
 
             if (filter === 'liquidity' || filter === 'fin') {
                 // Скрываем пай-чарты
-                // document.querySelectorAll('.pie-chart-wrapper').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.pie-chart-wrapper').forEach(el => el.style.display = 'none');
                 
                 // Подготовка данных для столбчатой диаграммы
                 const source = filter === 'liquidity' ? data.liquidity : data.fin;
