@@ -52,7 +52,8 @@ def parse_table(file_path):
             33: 'Долгосрочные обязательства',  # Строка 40 Excel
             40: 'Текущие обязательства'        # Строка 47 Excel
         }
-
+        for idx, row in df.iterrows():
+            print(idx, row[year1], row[year2])
         current_assets = df.iloc[16]
         current_liabilities = df.iloc[40]
         inventory = df.iloc[8]
@@ -106,10 +107,9 @@ def parse_table(file_path):
                 'indicator': 'Коэффициент маневренности',
                 year1: round((df.iloc[27][year1] + df.iloc[33][year1] - df.iloc[6][year1]) / df.iloc[27][year1], 3),
                 year2: round((df.iloc[27][year2] + df.iloc[33][year2] - df.iloc[6][year2]) / df.iloc[27][year2], 3)
-            }
-            
+            }            
         ]
-        print('fin', fin[0][year1])
+        print(current_liabilities[year1])
         for idx, row in df.iterrows():
             category = row['category']
             
